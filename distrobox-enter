@@ -301,7 +301,7 @@ generate_command() {
 	# Since user $HOME is very likely present in container, enter there directly
 	# to avoid confusing the user about shifted paths.
 	# pass distrobox-enter path, it will be used in the distrobox-export tool.
-	if [ "${skip_workdir}" -eq 0 ]; then
+	if [ "${skip_workdir}" -eq 0 ] && [ "${unshared_host}" = "false" ]; then
 		workdir="$(echo "${PWD:-${container_home:-"/"}}" | sed -e 's/"/\\\"/g')"
 		if [ -n "${workdir##*"${container_home}"*}" ]; then
 			workdir="/run/host${workdir}"
@@ -417,9 +417,11 @@ fi
 
 # Now inspect the container we're working with.
 container_status="unknown"
+unshared_host="false"
 eval "$(${container_manager} inspect --type container "${container_name}" --format \
 	'container_status={{.State.Status}};
 	{{range .Config.Env}}{{if slice . 0 5 | eq "HOME="}}container_home={{slice . 5 | printf "%q"}};{{end}}{{end}}
+	{{range .Config.Env}}{{if slice . 0 5 | eq "UNSH="}}unshared_host={{slice . 5 | printf "%q"}};{{end}}{{end}}
 	{{range .Config.Env}}{{if slice . 0 5 | eq "PATH="}}container_path={{slice . 5 | printf "%q"}}{{end}}{{end}}')"
 
 # Check if the container is even there

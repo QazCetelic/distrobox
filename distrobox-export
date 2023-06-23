@@ -26,7 +26,6 @@
 #	DISTROBOX_HOST_HOME
 
 # Defaults
-dest_path="${HOME}/.local/bin"
 export_action=""
 exported_app=""
 exported_app_label=""
@@ -37,6 +36,7 @@ extra_flags=""
 #	DBX_HOST_HOME is set in case container is created
 #	with custom --home directory
 host_home="${DISTROBOX_HOST_HOME:-"${HOME}"}"
+dest_path="${host_home}/.local/bin"
 is_login=0
 is_sudo=0
 rootful=""
@@ -312,8 +312,8 @@ export_binary() {
 # Arguments:
 #	none it will use the ones set up globally
 # Outputs:
-#	needed icons in /run/host/$host_home/.local/share/icons
-#	needed desktop files in /run/host/$host_home/.local/share/applications
+#	needed icons in $host_home/.local/share/icons
+#	needed desktop files in $host_home/.local/share/applications
 #	or error code.
 export_application() {
 	canon_dirs=""
@@ -373,7 +373,7 @@ export_application() {
 	done
 
 	# create applications dir if not existing
-	mkdir -p "/run/host${host_home}/.local/share/applications"
+	mkdir -p "${host_home}/.local/share/applications"
 
 	# copy icons in home directory
 	icon_file_absolute_path=""
@@ -385,13 +385,13 @@ export_application() {
 
 		# replace canonical paths with equivalent paths in HOME
 		icon_home_directory="$(dirname "${icon_file}" |
-			sed "s|/usr/share/|\/run\/host\/${host_home}/.local/share/|g" |
-			sed "s|/var/lib/flatpak/exports/share|\/run\/host\/${host_home}/.local/share/|g" |
+			sed "s|/usr/share/|${host_home}/.local/share/|g" |
+			sed "s|/var/lib/flatpak/exports/share|${host_home}/.local/share/|g" |
 			sed "s|pixmaps|icons|g")"
 
 		# check if we're exporting an icon which is not in a canonical path
 		if [ "${icon_home_directory}" = "$(dirname "${icon_file}")" ]; then
-			icon_home_directory="/run/host${host_home}/.local/share/icons/"
+			icon_home_directory="${host_home}/.local/share/icons/"
 			icon_file_absolute_path="${icon_home_directory}$(basename "${icon_file}")"
 		fi
 
@@ -421,8 +421,8 @@ export_application() {
 
 		# check if we're exporting or deleting
 		if [ "${exported_delete}" -ne 0 ]; then
-			rm -f "/run/host${host_home}/.local/share/applications/${desktop_original_file}"
-			rm -f "/run/host${host_home}/.local/share/applications/${desktop_home_file}"
+			rm -f "${host_home}/.local/share/applications/${desktop_original_file}"
+			rm -f "${host_home}/.local/share/applications/${desktop_home_file}"
 			# we're done, go to next
 			continue
 		fi
@@ -437,28 +437,28 @@ export_application() {
 			sed "/^TryExec=.*/d" |
 			sed "/^DBusActivatable=true/d" |
 			sed "s|Name.*|& ${exported_app_label}|g" \
-				> "/run/host${host_home}/.local/share/applications/${desktop_home_file}"
+				> "${host_home}/.local/share/applications/${desktop_home_file}"
 		# in the end we add the final quote we've opened in the "container_command_prefix"
 
-		if ! grep -q "StartupWMClass" "/run/host${host_home}/.local/share/applications/${desktop_home_file}"; then
+		if ! grep -q "StartupWMClass" "${host_home}/.local/share/applications/${desktop_home_file}"; then
 			printf "StartupWMClass=%s\n" "${exported_app}" >> "\
-/run/host${host_home}/.local/share/applications/${desktop_home_file}"
+${host_home}/.local/share/applications/${desktop_home_file}"
 		fi
 		# In case of an icon in a non canonical path, we need to replace the path
 		# in the desktop file.
 		if [ -n "${icon_file_absolute_path}" ]; then
 			sed -i "s|Icon=.*|Icon=${icon_file_absolute_path}|g" \
-				"/run/host${host_home}/.local/share/applications/${desktop_home_file}"
+				"${host_home}/.local/share/applications/${desktop_home_file}"
 			# we're done, go to next
 			continue
 		fi
 
 		# In case of an icon in a canonical path, but specified as an absolute
 		# we need to replace the path in the desktop file.
-		sed -i "s|Icon=/usr/share/|Icon=/run/host${host_home}/.local/share/|g" \
-			"/run/host${host_home}/.local/share/applications/${desktop_home_file}"
+		sed -i "s|Icon=/usr/share/|Icon=${host_home}/.local/share/|g" \
+			"${host_home}/.local/share/applications/${desktop_home_file}"
 		sed -i "s|pixmaps|icons|g" \
-			"/run/host${host_home}/.local/share/applications/${desktop_home_file}"
+			"${host_home}/.local/share/applications/${desktop_home_file}"
 	done
 
 	if [ "${exported_delete}" -ne 0 ]; then
